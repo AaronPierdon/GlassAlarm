@@ -1,0 +1,12 @@
+<resources>
+    <style name="Theme.GlassAlarm" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#0B1026</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+    <style name="Theme.GlassAlarm.Alarm">
+        <item name="android:windowBackground">#0B1026</item>
+        <item name="android:windowShowWallpaper">false</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+</resources>
