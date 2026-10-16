@@ -35,6 +35,7 @@ data class EventInstance(
     val color: Int,
     val location: String?,
     val reminders: List<Int>,
+    val recurring: Boolean = false,
 ) {
     val instanceKey: String get() = "$eventId@$begin"
 }
@@ -152,6 +153,7 @@ object CalendarRepo {
             CalendarContract.Instances.EVENT_LOCATION,    // 8
             CalendarContract.Instances.SELF_ATTENDEE_STATUS, // 9
             CalendarContract.Instances.STATUS,            // 10
+            CalendarContract.Instances.RRULE,             // 11
         )
         val raw = mutableListOf<EventInstance>()
         runCatching {
@@ -173,6 +175,7 @@ object CalendarRepo {
                         color = c.getInt(7),
                         location = c.getString(8)?.takeIf { it.isNotBlank() },
                         reminders = emptyList(),
+                        recurring = !c.getString(11).isNullOrBlank(),
                     )
                 }
             }

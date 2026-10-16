@@ -25,6 +25,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import java.time.LocalTime
@@ -123,7 +124,17 @@ fun GlassCard(
 
 /** Animated gradient + soft glowing blobs, the backdrop behind every glass surface. */
 @Composable
-fun GlassBackground(theme: GlassTheme, modifier: Modifier = Modifier, animate: Boolean = true, content: @Composable BoxScope.() -> Unit) {
+fun GlassBackground(
+    theme: GlassTheme,
+    modifier: Modifier = Modifier,
+    animate: Boolean = true,
+    dim: Float = 0.30f,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    // Contrast scrim: scaled by how bright the theme is, so light themes (Morning Sky, Ocean) darken noticeably
+    // while already-dark themes (Aurora, Midnight) are left almost untouched.
+    val avgLum = theme.gradient.map { it.luminance() }.average().toFloat()
+    val scrim = (dim * avgLum * 1.6f).coerceIn(0f, 0.45f)
     val t = rememberInfiniteTransition(label = "bg")
     val phase by t.animateFloat(
         initialValue = 0f, targetValue = 1f,
@@ -145,6 +156,7 @@ fun GlassBackground(theme: GlassTheme, modifier: Modifier = Modifier, animate: B
                 radius = w * 0.65f, center = b2,
             )
         }
+        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = scrim)))
         content()
     }
 }

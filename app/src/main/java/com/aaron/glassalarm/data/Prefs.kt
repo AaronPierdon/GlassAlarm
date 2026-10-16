@@ -206,12 +206,25 @@ class Prefs(context: Context) {
 
     /** Per-instance alert override; key = "eventId@begin". Absent = ALARM (always on by default). */
     fun instanceMode(instanceKey: String): AlertMode {
-        val v = readMap("modes")[instanceKey] ?: return AlertMode.ALARM
-        return AlertMode.entries.getOrElse(v.toInt()) { AlertMode.ALARM }
+        readMap("modes")[instanceKey]?.let { v -> return AlertMode.entries.getOrElse(v.toInt()) { AlertMode.ALARM } }
+        return seriesMode(instanceKey.substringBefore('@').toLongOrNull() ?: -1L) ?: AlertMode.ALARM
     }
     fun allInstanceModes(): Map<String, Long> = readMap("modes")
-    fun setInstanceMode(instanceKey: String, mode: AlertMode) = editMap("modes") {
-        if (mode == AlertMode.ALARM) remove(instanceKey) else put(instanceKey, mode.ordinal.toLong())
+
+    /** One occurrence. Stored only when it differs from the series default (or ALARM if no series setting). */
+    fun setInstanceMode(instanceKey: String, mode: AlertMode) {
+        val def = seriesMode(instanceKey.substringBefore('@').toLongOrNull() ?: -1L) ?: AlertMode.ALARM
+        editMap("modes") { if (mode == def) remove(instanceKey) else put(instanceKey, mode.ordinal.toLong()) }
+    }
+
+    /** Whole recurring series (keyed by event id). null = no series setting (alarm). */
+    fun seriesMode(eventId: Long): AlertMode? =
+        readMap("seriesModes")[eventId.toString()]?.let { AlertMode.entries.getOrNull(it.toInt()) }
+
+    /** Sets the whole series and clears per-occurrence overrides so every occurrence follows it. */
+    fun setSeriesMode(eventId: Long, mode: AlertMode) {
+        editMap("seriesModes") { if (mode == AlertMode.ALARM) remove(eventId.toString()) else put(eventId.toString(), mode.ordinal.toLong()) }
+        editMap("modes") { keys.removeAll { it.substringBefore('@') == eventId.toString() } }
     }
 
     /** trigger key -> time it fired (prevents double-firing on reschedule). */

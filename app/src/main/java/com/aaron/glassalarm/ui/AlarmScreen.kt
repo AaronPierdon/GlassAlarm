@@ -115,7 +115,7 @@ fun AlarmScreen(
         1f, 1.025f, infiniteRepeatable(tween(1400), RepeatMode.Reverse), label = "p",
     )
 
-    GlassBackground(theme) {
+    GlassBackground(theme, dim = 0.20f) {
         Column(
             Modifier.fillMaxSize().systemBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,

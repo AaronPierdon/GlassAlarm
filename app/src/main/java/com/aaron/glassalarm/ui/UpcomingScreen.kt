@@ -1,6 +1,8 @@
 package com.aaron.glassalarm.ui
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,7 +26,9 @@ import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.WarningAmber
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -81,6 +85,7 @@ fun UpcomingScreen(activity: MainActivity, refreshKey: Int, goToSetup: () -> Uni
     }
     val problems = remember(refreshKey) { PermissionCenter.criticalProblems(ctx) }
     var syncing by remember { mutableStateOf(false) }
+    var seriesTarget by remember { mutableStateOf<UpcomingItem?>(null) }
 
     val today = LocalDate.now()
     val grouped = events.groupBy { dayOf(it) }
@@ -178,13 +183,42 @@ fun UpcomingScreen(activity: MainActivity, refreshKey: Int, goToSetup: () -> Uni
                 SectionTitle(label)
             }
             items(dayItems, key = { it.instance.instanceKey }) { item ->
-                EventRow(item, now, prefs.clock24h) {
-                    prefs.setInstanceMode(item.instance.instanceKey, item.mode.next())
-                    Scheduler.rescheduleAsync(ctx, "toggle")
-                    localTick++
-                }
+                EventRow(
+                    item, now, prefs.clock24h,
+                    seriesMode = if (item.instance.recurring) prefs.seriesMode(item.instance.eventId) else null,
+                    onToggle = {
+                        prefs.setInstanceMode(item.instance.instanceKey, item.mode.next())
+                        Scheduler.rescheduleAsync(ctx, "toggle")
+                        localTick++
+                    },
+                    onLongPress = { if (item.instance.recurring) seriesTarget = item },
+                )
             }
         }
+    }
+
+    // Whole-series options for a recurring event (long-press its bell).
+    seriesTarget?.let { target ->
+        val setSeries = { mode: AlertMode ->
+            prefs.setSeriesMode(target.instance.eventId, mode)
+            Scheduler.rescheduleAsync(ctx, "series")
+            localTick++
+            seriesTarget = null
+        }
+        AlertDialog(
+            onDismissRequest = { seriesTarget = null },
+            containerColor = Color(0xFF1B2236),
+            title = { Text("Every \"${target.instance.title}\"", color = Color.White) },
+            text = { Text("Applies to all occurrences of this repeating event, including future ones. Tap the bell on a single day to override just that day.", color = TextDim) },
+            confirmButton = {
+                Column(horizontalAlignment = Alignment.End) {
+                    TextButton(onClick = { setSeries(AlertMode.ALARM) }) { Text("Alarm for whole series", color = Color.White) }
+                    TextButton(onClick = { setSeries(AlertMode.NOTIFY) }) { Text("Notify only for whole series", color = Color.White) }
+                    TextButton(onClick = { setSeries(AlertMode.OFF) }) { Text("Turn off whole series", color = Bad) }
+                    TextButton(onClick = { seriesTarget = null }) { Text("Cancel", color = TextDim) }
+                }
+            },
+        )
     }
 }
 
@@ -194,7 +228,14 @@ private fun dayOf(item: UpcomingItem): LocalDate {
 }
 
 @Composable
-private fun EventRow(item: UpcomingItem, now: Long, h24: Boolean, onToggle: () -> Unit) {
+private fun EventRow(
+    item: UpcomingItem,
+    now: Long,
+    h24: Boolean,
+    seriesMode: AlertMode?,
+    onToggle: () -> Unit,
+    onLongPress: () -> Unit,
+) {
     val inst = item.instance
     val ongoing = !inst.allDay && inst.begin <= now && inst.end > now
     GlassCard(Modifier.fillMaxWidth(), padding = 14.dp) {
@@ -213,24 +254,31 @@ private fun EventRow(item: UpcomingItem, now: Long, h24: Boolean, onToggle: () -
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(inst.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(triggerSummary(item, h24), color = TextDim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                val repeatTag = when {
+                    !inst.recurring -> ""
+                    seriesMode == AlertMode.OFF -> "↻ Series off · "
+                    seriesMode == AlertMode.NOTIFY -> "↻ Series: notify · "
+                    else -> "↻ "
+                }
+                Text(repeatTag + triggerSummary(item, h24), color = TextDim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 inst.location?.let { Text(it, color = TextFaint, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
             }
             Spacer(Modifier.width(8.dp))
-            ModeButton(item.mode, onToggle)
+            ModeButton(item.mode, onToggle, onLongPress)
         }
     }
 }
 
 @Composable
-private fun ModeButton(mode: AlertMode, onClick: () -> Unit) {
+@OptIn(ExperimentalFoundationApi::class)
+private fun ModeButton(mode: AlertMode, onClick: () -> Unit, onLongClick: () -> Unit) {
     val (icon, bg, tint) = when (mode) {
         AlertMode.ALARM -> Triple(Icons.Default.Alarm, Color.White, Color(0xFF0B1026))
         AlertMode.NOTIFY -> Triple(Icons.Default.NotificationsActive, Color(0xFF3B82F6), Color.White)
         AlertMode.OFF -> Triple(Icons.Default.NotificationsOff, Color.White.copy(alpha = 0.15f), Color.White.copy(alpha = 0.7f))
     }
     Box(
-        Modifier.size(44.dp).clip(CircleShape).background(bg).clickable(onClick = onClick),
+        Modifier.size(44.dp).clip(CircleShape).background(bg).combinedClickable(onClick = onClick, onLongClick = onLongClick),
         contentAlignment = Alignment.Center,
     ) { Icon(icon, mode.name, tint = tint, modifier = Modifier.size(22.dp)) }
 }
@@ -238,7 +286,7 @@ private fun ModeButton(mode: AlertMode, onClick: () -> Unit) {
 private fun triggerSummary(item: UpcomingItem, h24: Boolean): String {
     val inst = item.instance
     return when {
-        item.mode == AlertMode.OFF -> "Alerts off for this event"
+        item.mode == AlertMode.OFF -> if (inst.recurring) "Off" else "Alerts off for this event"
         item.triggers.isEmpty() && inst.allDay -> "All-day alarms are off (Settings)"
         item.triggers.isEmpty() -> "No alarm pending"
         else -> {

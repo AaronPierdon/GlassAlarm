@@ -32,8 +32,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-val TextDim = Color.White.copy(alpha = 0.72f)
-val TextFaint = Color.White.copy(alpha = 0.5f)
+val TextDim = Color.White.copy(alpha = 0.82f)
+val TextFaint = Color.White.copy(alpha = 0.62f)
 val Good = Color(0xFF4ADE80)
 val Bad = Color(0xFFFF6B6B)
 val Warn = Color(0xFFFBBF24)
