@@ -2,6 +2,24 @@
 
 A personal Android app (Kotlin + Jetpack Compose) that reads your calendars, lets you pick accounts and calendars, and turns events into full-screen glass alarms over the lock screen. It's built to keep working under OxygenOS's aggressive background killing.
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/alarm-morning-sky.jpg" width="250" alt="Alarm screen, Morning Sky theme">
+  <img src="docs/screenshots/alarm-aurora.jpg" width="250" alt="Alarm screen, Aurora theme">
+  <img src="docs/screenshots/alarm-sunset.jpg" width="250" alt="Alarm screen, Sunset theme">
+</p>
+<p align="center"><em>The lock-screen alarm in three of the eight themes: live clock, event card, snooze stepper, slide to dismiss, and the weather strip.</em></p>
+
+<p align="center">
+  <img src="docs/screenshots/upcoming.jpg" width="250" alt="Upcoming events with per-event alarm toggles">
+  <img src="docs/screenshots/settings.jpg" width="250" alt="Settings: themes, when to ring, Android Auto">
+  <img src="docs/screenshots/setup-real-device.jpg" width="250" alt="Setup screen on a OnePlus 12">
+</p>
+<p align="center"><em>Upcoming (tap the bell for Alarm, Notify or Off; long-press a repeating event for the whole series) · Settings · Setup, captured on a OnePlus 12.</em></p>
+
+> The first five images are rendered previews built from the app's own theme colors and layout, using sample events. The Setup screen is a real capture from a OnePlus 12.
+
 ## Build & install (Windows)
 
 1. Install **Android Studio** (any 2024+ version).
